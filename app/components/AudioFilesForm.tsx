@@ -1,21 +1,20 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
-import type React from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useProcessStore } from '@/providers/counter-store-provider';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type React from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const formSchema = z.object({
   files: z.instanceof(FileList),
 });
 
 export const AudioFilesForm: React.FC = () => {
-  const [rawText, setRawText] = useState<string>('');
-  const [processedText, setProcessedText] = useState<string>('');
+  const { uploadAudioFiles, records, isProcessing } = useProcessStore((state) => state);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -24,32 +23,7 @@ export const AudioFilesForm: React.FC = () => {
   const fileRef = form.register('files');
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-
-    const formData = new FormData();
-    formData.append('file', data.files[0]);
-
-    fetch('/api/audio-to-text', {
-      method: 'POST',
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setRawText(data.transcription);
-      })
-      .catch((error) => console.error(error));
-  };
-
-  const onProcess = () => {
-    fetch('/api/process', {
-      method: 'POST',
-      body: JSON.stringify({ prompt: rawText }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setProcessedText(data.processed);
-      })
-      .catch((error) => console.error(error));
+    uploadAudioFiles(data.files);
   };
 
   return (
@@ -69,18 +43,22 @@ export const AudioFilesForm: React.FC = () => {
             </FormItem>
           )}
         />
-        <Button type="submit">Rip Audio to Text</Button>
+        <Button type="submit" loading={isProcessing}>
+          Rip Audio to Text
+        </Button>
       </form>
-      <p className="pt-8">{rawText}</p>
-      <Button
-        onClick={() => {
-          onProcess();
-        }}
-        className="mt-8"
-      >
-        Process
-      </Button>
-      <p className="pt-8">{processedText}</p>
+
+      {records.map((record, index) => (
+        <div key={record.fileNumber} className="p-4 rounded-md">
+          <h2 className="text-xl font-semibold">Record {index + 1}</h2>
+          <p className="pt-2">File Number: {record.fileNumber}</p>
+          <p className="pt-2">Patient Name: {record.patientName}</p>
+          <p className="pt-2">Referring Doctor: {record.referringDoctor}</p>
+          <p className="pt-2">Copy Doctors: {record.copyDoctors}</p>
+          <p className="pt-2">Letter Body: {record.letterBody}</p>
+          <p className="pt-4">Original Text: {record.originalText}</p>
+        </div>
+      ))}
     </Form>
   );
 };

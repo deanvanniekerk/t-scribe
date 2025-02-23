@@ -1,37 +1,37 @@
+import type { AudioToTextResponse } from '@/app/types';
 import { NextResponse } from 'next/server';
 import { groq } from '../groq';
 
-export const POST = async (req: Request, _res: Response) => {
+export const POST = async (req: Request) => {
   const formData = await req.formData();
-  const fileEntry = formData.get('file');
 
-  if (!(fileEntry instanceof File)) {
-    return NextResponse.json({ error: 'No file provided or file is not valid.' }, { status: 400 });
-  }
+  const response: AudioToTextResponse = [];
 
-  const filename = fileEntry.name.replaceAll(' ', '_');
+  for (const fileEntry of formData.values()) {
+    console.log(fileEntry);
+    if (!(fileEntry instanceof File)) {
+      return NextResponse.json({ error: 'No file provided or file is not valid.' }, { status: 400 });
+    }
 
-  console.log(filename);
+    const filename = fileEntry.name;
 
-  try {
     // Create a transcription job
     const transcription = await groq.audio.transcriptions.create({
       file: fileEntry,
       // https://console.groq.com/docs/speech-text
       model: 'whisper-large-v3-turbo', // better, bit more exp
       // model: 'distil-whisper-large-v3-en',
-      prompt: 'Ophthalmologist doctors notes after consult with patient',
+      prompt: 'Ophthalmologist doctors notes after consult with patient. Except medical terminology.',
       response_format: 'json', // Optional
       language: 'en', // Optional
       temperature: 0.0, // Optional
     });
 
-    // Log the transcribed text
-    console.log(transcription.text);
-
-    return NextResponse.json({ transcription: transcription.text, status: 200 });
-  } catch (error) {
-    console.log('Error occurred ', error);
-    return NextResponse.json({ Message: 'Failed', status: 500 });
+    response.push({
+      fileName: filename,
+      transcription: transcription.text,
+    });
   }
+
+  return NextResponse.json(response);
 };

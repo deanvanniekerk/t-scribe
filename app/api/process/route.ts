@@ -1,47 +1,52 @@
+import { ProcessRequest, type ProcessResponse } from '@/app/types';
 import { NextResponse } from 'next/server';
 import { groq } from '../groq';
 
 export const POST = async (req: Request) => {
-  const data = await req.json();
+  const data = ProcessRequest.parse(await req.json());
 
-  try {
-    const chat = await groq.chat.completions.create({
-      model: 'qwen-2.5-32b',
-      messages: [
-        {
-          role: 'user',
-          content: `
+  const chat = await groq.chat.completions.create({
+    model: data.model,
+    messages: [
+      {
+        role: 'user',
+        content: `
 I am a specialist ophtalmologist. 
 I will provide you with my notes after a consult with a patient. 
-I need to email the notes to the referring optometrist. 
-Please format the notes in a way that is professional and easy to understand. 
-Thank the optometrist for the referral and continued support.
+I need your to create an email for the referring doctor based apon my notes. 
+Please format the email in a way that is medically professional and clear. 
+End the email by thanking the doctor for the referral and continued support.
+It is highly important that the email is grammatically correct and medically sound.
+It is possible that there are addition doctors that need to be copied on the email.
 I want your response to be in json format with the schema:
 
 {
-    "body": string;
-    "fileNumber": string;
-    "patientName": string;
-    "referringDoctor": string;
+  "letterBody": string;
+  "fileNumber": string;
+  "patientName": string;
+  "referringDoctor": string;
+  "copyDoctors": string;
 }
 
 `,
-        },
-        {
-          role: 'user',
-          content: data.prompt,
-        },
-      ],
-      // max_tokens: 100,
-      temperature: 0.0,
-      stream: false,
-    });
+      },
+      {
+        role: 'user',
+        content: data.transcription,
+      },
+    ],
+    // max_tokens: 100,
+    temperature: 0.0,
+    stream: false,
+    response_format: { type: 'json_object' },
+  });
 
-    console.log(chat);
+  console.log(chat.choices[0].message.content);
 
-    return NextResponse.json({ processed: chat.choices[0].message.content, status: 200 });
-  } catch (error) {
-    console.log('Error occurred ', error);
-    return NextResponse.json({ Message: 'Failed', status: 500 });
-  }
+  const response = {
+    originalText: data.transcription,
+    ...JSON.parse(chat.choices[0].message.content ?? ''),
+  } satisfies ProcessResponse;
+
+  return NextResponse.json(response);
 };
