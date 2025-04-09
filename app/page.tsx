@@ -1,4 +1,4 @@
-import { ProcessStoreProvider } from '@/providers/counter-store-provider';
+import { ProcessStoreProvider } from '@/providers/process-store-provider';
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import { AudioFilesForm } from './components/AudioFilesForm';
 

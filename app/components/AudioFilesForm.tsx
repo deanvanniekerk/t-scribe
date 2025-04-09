@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useProcessStore } from '@/providers/counter-store-provider';
+import { useProcessStore } from '@/providers/process-store-provider';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
