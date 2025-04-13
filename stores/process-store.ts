@@ -1,6 +1,8 @@
 import { AudioToTextResponse, type ProcessRequest, Record } from '@/app/types';
 import { MODELS } from '@/lib/ai';
 import { createStore } from 'zustand/vanilla';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 export type ProcessState = {
   files: FileList | null;
@@ -19,6 +21,8 @@ export type ProcessActions = {
   updateRecord: (index: number, record: Record) => void;
   setModel: (model: string) => void;
   reprocess: (index: number, model: string) => void;
+  downloadZip: () => Promise<void>;
+  reset: () => void;
 };
 
 export type ProcessStore = ProcessState & ProcessActions;
@@ -36,6 +40,28 @@ export const defaultInitState: ProcessState = {
 export const createProcessStore = (initState: ProcessState = defaultInitState) => {
   return createStore<ProcessStore>()((set, get) => ({
     ...initState,
+    reset: () => {
+      set({
+        ...defaultInitState,
+      });
+    },
+    downloadZip: async () => {
+      const zip = new JSZip();
+
+      const records = get().records;
+      for (const record of records) {
+        const fileName = `${record.fileNumber}_${record.patientName.replaceAll("'", '')}.txt`;
+        zip.file(fileName, record.emailBody); // Add file to zip
+      }
+
+      // Generate the zip file asynchronously
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Use file-saver to trigger the download
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('en-GB').split('/').join('');
+      saveAs(zipBlob, `transcripts_${dateStr}.zip`);
+    },
     setModel: (model) => {
       set({ model });
     },

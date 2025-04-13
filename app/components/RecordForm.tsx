@@ -16,7 +16,9 @@ type Props = {
 };
 
 export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => {
-  const { prevRecord, nextRecord, updateRecord, reprocess, isReprocessing } = useProcessStore((state) => state);
+  const { prevRecord, nextRecord, updateRecord, reprocess, isReprocessing, downloadZip, reset } = useProcessStore(
+    (state) => state,
+  );
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateRecord(index, { ...record, emailBody: e.target.value });
@@ -82,10 +84,19 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
       </CardContent>
       <CardFooter>
         <div className="flex justify-between w-full">
-          <Button variant="secondary" onClick={prevRecord}>
-            {'< Previous'}
-          </Button>
-          <Button onClick={nextRecord}>{'Next >'}</Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={reset}>
+              {'Reset'}
+            </Button>
+            <Button onClick={downloadZip}>{'Download'}</Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={prevRecord}>
+              {'< Previous'}
+            </Button>
+            <Button onClick={nextRecord}>{'Next >'}</Button>
+          </div>
         </div>
       </CardFooter>
     </Card>
