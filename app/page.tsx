@@ -1,6 +1,7 @@
 import { ProcessStoreProvider } from '@/providers/process-store-provider';
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { SignInButton, SignedIn, SignedOut, UserButton, useSignIn } from '@clerk/nextjs';
 import { AudioFilesForm } from './components/AudioFilesForm';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
@@ -15,7 +16,9 @@ export default function Home() {
         </header>
 
         <SignedOut>
-          <SignInButton />
+          <SignInButton mode="modal">
+            <Button>Sign In</Button>
+          </SignInButton>
         </SignedOut>
 
         <SignedIn>

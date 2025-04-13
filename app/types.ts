@@ -14,12 +14,13 @@ export const ProcessRequest = z.object({
   transcription: z.string(),
 });
 
-export type ProcessResponse = z.infer<typeof ProcessResponse>;
-export const ProcessResponse = z.object({
-  originalText: z.string(),
-  letterBody: z.string(),
+export type Record = z.infer<typeof Record>;
+export const Record = z.object({
+  transcript: z.string(),
+  emailBody: z.string(),
   fileNumber: z.string(),
   patientName: z.string(),
   referringDoctor: z.string(),
   copyDoctors: z.string(),
+  model: z.string(),
 });

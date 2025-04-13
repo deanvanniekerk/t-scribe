@@ -21,7 +21,7 @@ export const POST = async (req: Request) => {
       // https://console.groq.com/docs/speech-text
       model: 'whisper-large-v3-turbo', // better, bit more exp
       // model: 'distil-whisper-large-v3-en',
-      prompt: 'Ophthalmologist doctors notes after consult with patient. Except medical terminology.',
+      prompt: 'Ophthalmologist doctors notes after a consult with patient. Expect medical terminology.',
       response_format: 'json', // Optional
       language: 'en', // Optional
       temperature: 0.0, // Optional
