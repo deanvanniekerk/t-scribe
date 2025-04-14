@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useProcessStore } from '@/providers/process-store-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MODELS } from '@/lib/ai';
+import { Input } from '@/components/ui/input';
 
 type Props = {
   record: Record;
@@ -20,12 +21,8 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
     (state) => state,
   );
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateRecord(index, { ...record, emailBody: e.target.value });
-  };
-
-  const handleModelChange = (model: string) => {
-    updateRecord(index, { ...record, model: model });
+  const handleRecordFieldChange = (key: keyof Record, value: string) => {
+    updateRecord(index, { ...record, [key]: value });
   };
 
   return (
@@ -36,28 +33,47 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
         </CardTitle>
       </CardHeader>
       <CardContent className="text-sm">
-        <p>
-          <span className="font-semibold">File Number</span>: {record.fileNumber}
-        </p>
-        <p className="pt-4">
-          <span className="font-semibold">Patient Name</span>: {record.patientName}
-        </p>
-        <p className="pt-4">
-          <span className="font-semibold">Referring Doctor</span>: {record.referringDoctor}
-        </p>
-        <p className="pt-4">
+        <div className="flex gap-2 items-center">
+          <span className="font-semibold text-nowrap w-40">File Number:</span>
+          <Input value={record.fileNumber} onChange={(e) => handleRecordFieldChange('fileNumber', e.target.value)} />
+        </div>
+        <div className="flex gap-2 pt-4 items-center">
+          <span className="font-semibold text-nowrap w-40">Patient Name:</span>
+          <Input value={record.patientName} onChange={(e) => handleRecordFieldChange('patientName', e.target.value)} />
+        </div>
+        {/* <div className="flex gap-2 pt-4 items-center">
+          <span className="font-semibold text-nowrap w-40">Referring Doctor:</span>
+          <Input
+            value={record.referringDoctor}
+            onChange={(e) => handleRecordFieldChange('referringDoctor', e.target.value)}
+            disabled={true}
+          />
+        </div> */}
+        {/* <p className="pt-4">
           <span className="font-semibold">Copy Doctors</span>: {record.copyDoctors}
-        </p>
+        </p> */}
         <Accordion type="single" collapsible>
           <AccordionItem value="transcript">
             <AccordionTrigger>Original Transcript</AccordionTrigger>
-            <AccordionContent>{record.transcript}</AccordionContent>
+            <AccordionContent>
+              <Textarea
+                value={record.transcript}
+                rows={14}
+                autoComplete="off"
+                onChange={(e) => handleRecordFieldChange('transcript', e.target.value)}
+              />
+            </AccordionContent>
           </AccordionItem>
         </Accordion>
         <p className="pb-4">
           <span className="font-semibold">Email: </span>
         </p>
-        <Textarea value={record.emailBody} rows={14} autoComplete="off" onChange={handleEmailChange} />
+        <Textarea
+          value={record.emailBody}
+          rows={14}
+          autoComplete="off"
+          onChange={(e) => handleRecordFieldChange('emailBody', e.target.value)}
+        />
         <div className="flex w-full pt-4 justify-end gap-2">
           <Button
             variant="secondary"
@@ -68,7 +84,7 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
           >
             Reload
           </Button>
-          <Select value="{model}" onValueChange={handleModelChange}>
+          <Select value="{model}" onValueChange={(value) => handleRecordFieldChange('model', value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Modal">{record.model}</SelectValue>
             </SelectTrigger>
