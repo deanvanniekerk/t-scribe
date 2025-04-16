@@ -20,8 +20,8 @@ Extract the file number, patient name, referring doctor and copy doctors from th
 There are not always copy doctors, so if there are none, leave the field empty.
 When starting the email address referring doctors and optometrists by their first name, if there is no first name, refer to doctor as "Dr {last name}" and optometrist as "Mr/Mrs {last name}".
 Do not include the file number in the email.
-End the email with "Thank you for your continued support."
-Do no include any other closing remarks like "Kind regards" or "Sincerely" or name.
+End the email with "Thank you for your continued support." THERE SHOULD BE NO OTHER CLOSING REMARKS.
+Do NOT include any other closing remarks like "Kind regards" or "Sincerely" or name.
 Include paragraphs and line breaks in the email.
 I want your response to be in json format with the schema:
 
@@ -37,11 +37,11 @@ I want your response to be in json format with the schema:
       },
       {
         role: 'user',
-        content: data.transcription,
+        content: `note: "${data.transcription}"`,
       },
     ],
     // max_tokens: 100,
-    temperature: 0.0,
+    temperature: 0.3,
     stream: false,
     response_format: { type: 'json_object' },
   });

@@ -82,7 +82,7 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
             }}
             loading={isReprocessing}
           >
-            Reload
+            Try again
           </Button>
           <Select value="{model}" onValueChange={(value) => handleRecordFieldChange('model', value)}>
             <SelectTrigger className="w-[180px]">

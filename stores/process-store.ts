@@ -3,6 +3,8 @@ import { MODELS } from '@/lib/ai';
 import { createStore } from 'zustand/vanilla';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
+import { persist } from 'zustand/middleware';
 
 export type ProcessState = {
   files: FileList | null;
@@ -38,115 +40,138 @@ export const defaultInitState: ProcessState = {
 };
 
 export const createProcessStore = (initState: ProcessState = defaultInitState) => {
-  return createStore<ProcessStore>()((set, get) => ({
-    ...initState,
-    reset: () => {
-      set({
-        ...defaultInitState,
-      });
-    },
-    downloadZip: async () => {
-      const zip = new JSZip();
+  return createStore<ProcessStore>()(
+    persist(
+      (set, get) => ({
+        ...initState,
+        reset: () => {
+          set({
+            ...defaultInitState,
+          });
+        },
+        downloadZip: async () => {
+          const zip = new JSZip();
 
-      const records = get().records;
-      for (const record of records) {
-        const fileName = `${record.fileNumber}_${record.patientName.replaceAll("'", '')}.txt`;
-        zip.file(fileName, record.emailBody); // Add file to zip
-      }
+          const records = get().records;
+          for (const record of records) {
+            const fileName = `${record.fileNumber}_${record.patientName.replaceAll("'", '')}.txt`;
+            zip.file(fileName, record.emailBody); // Add file to zip
+          }
 
-      // Generate the zip file asynchronously
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+          // Generate the zip file asynchronously
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-      // Use file-saver to trigger the download
-      const today = new Date();
-      const dateStr = today.toLocaleDateString('en-GB').split('/').join('');
-      saveAs(zipBlob, `transcripts_${dateStr}.zip`);
-    },
-    setModel: (model) => {
-      set({ model });
-    },
-    nextRecord: () => {
-      set((state) => ({
-        currentRecordIndex: Math.min(state.currentRecordIndex + 1, state.records.length - 1),
-      }));
-    },
-    prevRecord: () => {
-      set((state) => ({
-        currentRecordIndex: Math.max(state.currentRecordIndex - 1, 0),
-      }));
-    },
-    updateRecord: (index: number, record: Record) => {
-      set((state) => ({
-        records: state.records.map((r, i) => (i === index ? record : r)),
-      }));
-    },
-    reprocess: async (index: number, model: string) => {
-      set({ isReprocessing: true });
-      const record = get().records[index];
-      const request: ProcessRequest = {
-        model,
-        transcription: record.transcript,
-      };
-      const response = await fetch('/api/process', {
-        method: 'POST',
-        body: JSON.stringify(request),
-      });
-      const json = await response.json();
-      const processReponse = Record.parse(json);
-      set((state) => ({
-        records: state.records.map((r, i) => (i === index ? processReponse : r)),
-        isReprocessing: false,
-      }));
-    },
-    uploadAudioFiles: async (files: FileList) => {
-      let currentProgress = 0;
-      const totalProgress = files.length * 2;
+          // Use file-saver to trigger the download
+          const today = new Date();
+          const dateStr = today.toLocaleDateString('en-GB').split('/').join('');
+          saveAs(zipBlob, `transcripts_${dateStr}.zip`);
+        },
+        setModel: (model) => {
+          set({ model });
+        },
+        nextRecord: () => {
+          set((state) => ({
+            currentRecordIndex: Math.min(state.currentRecordIndex + 1, state.records.length - 1),
+          }));
+        },
+        prevRecord: () => {
+          set((state) => ({
+            currentRecordIndex: Math.max(state.currentRecordIndex - 1, 0),
+          }));
+        },
+        updateRecord: (index: number, record: Record) => {
+          set((state) => ({
+            records: state.records.map((r, i) => (i === index ? record : r)),
+          }));
+        },
+        reprocess: async (index: number, model: string) => {
+          set({ isReprocessing: true });
 
-      set({ files });
+          try {
+            const record = get().records[index];
+            const request: ProcessRequest = {
+              model,
+              transcription: record.transcript,
+            };
+            const response = await fetch('/api/process', {
+              method: 'POST',
+              body: JSON.stringify(request),
+            });
+            const json = await response.json();
+            const processReponse = Record.parse(json);
+            set((state) => ({
+              records: state.records.map((r, i) => (i === index ? processReponse : r)),
+            }));
+          } catch (error) {
+            console.error('Error reprocessing record:', error);
+            toast.error('Error reprocessing record. Try a different model.', {
+              position: 'top-center',
+            });
+          } finally {
+            set({ isReprocessing: false });
+          }
+        },
+        uploadAudioFiles: async (files: FileList) => {
+          let currentProgress = 0;
+          const totalProgress = files.length * 2;
 
-      set({ isProcessing: true, progress: 0, currentRecordIndex: 0 });
+          set({ files });
 
-      for (const file of files) {
-        const formData = new FormData();
+          try {
+            set({ isProcessing: true, progress: 0, currentRecordIndex: 0, records: [] });
 
-        formData.append(file.name, file);
+            for (const file of files) {
+              const formData = new FormData();
 
-        const audioToTextResponse = await fetch('/api/audio-to-text', {
-          method: 'POST',
-          body: formData,
-        });
+              formData.append(file.name, file);
 
-        const [text] = AudioToTextResponse.parse(await audioToTextResponse.json());
+              const audioToTextResponse = await fetch('/api/audio-to-text', {
+                method: 'POST',
+                body: formData,
+              });
 
-        currentProgress += 1;
-        set({
-          progress: Math.ceil((currentProgress / totalProgress) * 100),
-        });
+              const [text] = AudioToTextResponse.parse(await audioToTextResponse.json());
 
-        const request: ProcessRequest = {
-          model: get().model,
-          transcription: text.transcription,
-        };
+              currentProgress += 1;
+              set({
+                progress: Math.ceil((currentProgress / totalProgress) * 100),
+              });
 
-        const response = await fetch('/api/process', {
-          method: 'POST',
-          body: JSON.stringify(request),
-        });
+              const request: ProcessRequest = {
+                model: get().model,
+                transcription: text.transcription,
+              };
 
-        const json = await response.json();
-        const processReponse = Record.parse(json);
+              const response = await fetch('/api/process', {
+                method: 'POST',
+                body: JSON.stringify(request),
+              });
 
-        currentProgress += 1;
-        set({
-          progress: Math.ceil((currentProgress / totalProgress) * 100),
-        });
+              const json = await response.json();
+              const processReponse = Record.parse(json);
 
-        set((state) => ({
-          records: [...state.records, processReponse],
-        }));
-      }
+              currentProgress += 1;
+              set({
+                progress: Math.ceil((currentProgress / totalProgress) * 100),
+              });
 
-      set({ isProcessing: false });
-    },
-  }));
+              set((state) => ({
+                records: [...state.records, processReponse],
+              }));
+            }
+          } catch (error) {
+            console.error('Error reprocessing record:', error);
+            toast.error('Error reprocessing record. Try a different model.', {
+              position: 'top-center',
+            });
+          } finally {
+            set({ isProcessing: false });
+          }
+        },
+      }),
+      {
+        name: 'process-store',
+      },
+    ),
+  );
 };
