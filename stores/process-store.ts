@@ -125,7 +125,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
 
               formData.append(file.name, file);
 
-              const audioToTextResponse = await fetch('/api/audio-to-text', {
+              const audioToTextResponse = await fetch('/api/scriber', {
                 method: 'POST',
                 body: formData,
               });
