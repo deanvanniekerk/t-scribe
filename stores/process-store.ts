@@ -5,6 +5,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { persist } from 'zustand/middleware';
+import { promiseRetry } from '@/lib/promise';
 
 export type ProcessState = {
   files: FileList | null;
@@ -125,10 +126,14 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
 
               formData.append(file.name, file);
 
-              const audioToTextResponse = await fetch('/api/scriber', {
-                method: 'POST',
-                body: formData,
-              });
+              const audioToTextResponse = await promiseRetry(
+                () =>
+                  fetch('/api/scriber', {
+                    method: 'POST',
+                    body: formData,
+                  }),
+                { retries: 5 },
+              );
 
               const [text] = AudioToTextResponse.parse(await audioToTextResponse.json());
 
@@ -142,10 +147,14 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
                 transcription: text.transcription,
               };
 
-              const response = await fetch('/api/process', {
-                method: 'POST',
-                body: JSON.stringify(request),
-              });
+              const response = await promiseRetry(
+                () =>
+                  fetch('/api/process', {
+                    method: 'POST',
+                    body: JSON.stringify(request),
+                  }),
+                { retries: 5 },
+              );
 
               const json = await response.json();
               const processReponse = Record.parse(json);
