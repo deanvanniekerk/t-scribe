@@ -1,11 +1,9 @@
 import type { AudioToTextResponse } from '@/app/types';
 import { NextResponse } from 'next/server';
 import { GoogleGenAI, createUserContent, createPartFromUri } from '@google/genai';
-import Bottleneck from 'bottleneck';
+import { limiter } from '@/lib/queue';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-
-const limiter = new Bottleneck({ minTime: 60000 / 10 });
 
 export const POST = async (req: Request) => {
   const formData = await req.formData();
