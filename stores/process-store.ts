@@ -1,11 +1,11 @@
-import { AudioToTextResponse, type ProcessRequest, Record } from '@/app/types';
+import { AudioToTextResponse, FileUploadResponse, type ProcessRequest, Record } from '@/app/types';
 import { MODELS } from '@/lib/ai';
 import { createStore } from 'zustand/vanilla';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { persist } from 'zustand/middleware';
-import { promiseRetry } from '@/lib/promise';
+import { retry } from '@/lib/promise';
 
 export type ProcessState = {
   files: FileList | null;
@@ -114,7 +114,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
         },
         uploadAudioFiles: async (files: FileList) => {
           let currentProgress = 0;
-          const totalProgress = files.length * 2;
+          const totalProgress = files.length * 3;
 
           set({ files });
 
@@ -126,16 +126,30 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
 
               formData.append(file.name, file);
 
-              const audioToTextResponse = await promiseRetry(
+              const fileUploadResponse = await retry(
                 () =>
-                  fetch('/api/scriber', {
+                  fetch('/api/file-upload', {
                     method: 'POST',
                     body: formData,
-                  }),
+                  }).then((res) => res.json()),
                 { retries: 5 },
               );
 
-              const [text] = AudioToTextResponse.parse(await audioToTextResponse.json());
+              currentProgress += 1;
+              set({
+                progress: Math.ceil((currentProgress / totalProgress) * 100),
+              });
+
+              const audioToTextResponse = await retry(
+                () =>
+                  fetch('/api/scriber', {
+                    method: 'POST',
+                    body: JSON.stringify(FileUploadResponse.parse(fileUploadResponse)),
+                  }).then((res) => res.json()),
+                { retries: 5 },
+              );
+
+              const [text] = AudioToTextResponse.parse(audioToTextResponse);
 
               currentProgress += 1;
               set({
@@ -147,17 +161,16 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
                 transcription: text.transcription,
               };
 
-              const response = await promiseRetry(
+              const response = await retry(
                 () =>
                   fetch('/api/process', {
                     method: 'POST',
                     body: JSON.stringify(request),
-                  }),
+                  }).then((res) => res.json()),
                 { retries: 5 },
               );
 
-              const json = await response.json();
-              const processReponse = Record.parse(json);
+              const processReponse = Record.parse(response);
 
               currentProgress += 1;
               set({

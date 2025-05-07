@@ -1,52 +1,110 @@
-export function promiseRetry<T>(
-  fn: () => Promise<T>,
-  options: {
-    retries: number;
-    initialDelay?: number;
-    maxDelay?: number;
-    backoffFactor?: number;
-  },
-): Promise<T> {
-  const { retries, initialDelay = 2000, maxDelay = 10000, backoffFactor = 2 } = options;
+/**
+ * Retry a promise-returning function with incremental (exponential) backoff.
+ */
 
-  return new Promise((resolve, reject) => {
-    let attempt = 0;
-
-    const execute = () => {
-      fn()
-        .then(resolve)
-        .catch((error) => {
-          if (attempt >= retries) {
-            reject(error);
-            console.error(`Failed after ${attempt} attempts:`, error);
-            return;
-          }
-
-          attempt++;
-          const delay = Math.min(initialDelay * backoffFactor ** (attempt - 1), maxDelay);
-          setTimeout(execute, delay);
-        });
-    };
-
-    execute();
-  });
+export interface RetryOptions {
+  /**
+   * Maximum number of attempts (including the first).
+   * Default: 3
+   */
+  retries?: number;
+  /**
+   * Initial delay in milliseconds before the first retry.
+   * Default: 500
+   */
+  initialDelay?: number;
+  /**
+   * Backoff multiplier factor.
+   * delay_n = initialDelay * factor^(n-1)
+   * Default: 2
+   */
+  factor?: number;
+  /**
+   * Maximum delay in milliseconds between retries.
+   * Default: Infinity (no cap)
+   */
+  maxDelay?: number;
+  /**
+   * Optional callback invoked before each retry attempt.
+   */
+  onRetry?: (attempt: number, delay: number, error: unknown) => void;
 }
 
-// Example usage:
-/*
-  async function example() {
-    const fetchData = () => fetch('https://api.example.com/data').then(res => res.json());
-    
+/**
+ * Returns a promise that resolves after a given number of milliseconds.
+ */
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries a promise-returning function according to provided backoff options.
+ *
+ * @param fn - A function returning a promise to retry.
+ * @param options - Configuration for retry behavior.
+ * @returns A promise that resolves to the function's result or rejects with the last error.
+ */
+export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
+  const { retries = 3, initialDelay = 2000, factor = 3, maxDelay = Number.POSITIVE_INFINITY, onRetry } = options;
+
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (attempt < retries) {
     try {
-      const result = await promiseRetry(fetchData, {
-        retries: 3,
-        initialDelay: 1000,
-        maxDelay: 5000,
-        backoffFactor: 2
-      });
-      console.log('Success:', result);
-    } catch (error) {
-      console.error('Failed after retries:', error);
+      attempt++;
+      console.log(`Attempt ${attempt}...`);
+      return await fn();
+    } catch (err) {
+      console.error(`Attempt ${attempt} failed:`, err);
+      lastError = err;
+      if (attempt >= retries) {
+        break;
+      }
+      // Calculate incremental (exponential) backoff delay
+      const delay = Math.min(initialDelay * factor ** (attempt - 1), maxDelay);
+      if (onRetry) {
+        try {
+          onRetry(attempt, delay, err);
+        } catch {
+          // swallow errors in onRetry handler
+        }
+      }
+      await wait(delay);
     }
   }
-  */
+
+  // All attempts failed; reject with last encountered error
+  return Promise.reject(lastError);
+}
+
+/**
+ * Example usage:
+ *
+ * import { retry } from './retry';
+ *
+ * async function unstableFetch(): Promise<string> {
+ *   // simulate a fetch that may fail
+ *   if (Math.random() < 0.7) {
+ *     throw new Error('Random failure');
+ *   }
+ *   return 'Success!';
+ * }
+ *
+ * (async () => {
+ *   try {
+ *     const result = await retry(unstableFetch, {
+ *       retries: 5,
+ *       initialDelay: 300,
+ *       factor: 1.5,
+ *       maxDelay: 5000,
+ *       onRetry: (attempt, delay, err) => {
+ *         console.warn(`Attempt ${attempt} failed. Retrying in ${delay}ms...`, err);
+ *       },
+ *     });
+ *     console.log('Result:', result);
+ *   } catch (err) {
+ *     console.error('All retries failed:', err);
+ *   }
+ * })();
+ */

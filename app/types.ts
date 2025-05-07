@@ -1,5 +1,14 @@
 import * as z from 'zod';
 
+export type FileUploadResponse = z.infer<typeof FileUploadResponse>;
+export const FileUploadResponse = z.array(
+  z.object({
+    fileUri: z.string(),
+    mimeType: z.string(),
+    fileName: z.string(),
+  }),
+);
+
 export type AudioToTextResponse = z.infer<typeof AudioToTextResponse>;
 export const AudioToTextResponse = z.array(
   z.object({
