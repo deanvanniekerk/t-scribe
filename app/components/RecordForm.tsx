@@ -7,7 +7,7 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/
 import { Textarea } from '@/components/ui/textarea';
 import { useProcessStore } from '@/providers/process-store-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MODELS } from '@/lib/ai';
+import { MODELS, TEMPS } from '@/lib/ai';
 import { Input } from '@/components/ui/input';
 
 type Props = {
@@ -21,7 +21,7 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
     (state) => state,
   );
 
-  const handleRecordFieldChange = (key: keyof Record, value: string) => {
+  const handleRecordFieldChange = (key: keyof Record, value: string | number) => {
     updateRecord(index, { ...record, [key]: value });
   };
 
@@ -41,31 +41,15 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
           <span className="font-semibold text-nowrap w-40">Patient Name:</span>
           <Input value={record.patientName} onChange={(e) => handleRecordFieldChange('patientName', e.target.value)} />
         </div>
-        {/* <div className="flex gap-2 pt-4 items-center">
-          <span className="font-semibold text-nowrap w-40">Referring Doctor:</span>
-          <Input
-            value={record.referringDoctor}
-            onChange={(e) => handleRecordFieldChange('referringDoctor', e.target.value)}
-            disabled={true}
+        <div className="flex gap-2 pt-4 items-center">
+          <span className="font-semibold text-nowrap w-40">Referred By:</span>
+          <Input value={record.referredBy} onChange={(e) => handleRecordFieldChange('referredBy', e.target.value)}
           />
-        </div> */}
+        </div>
         {/* <p className="pt-4">
           <span className="font-semibold">Copy Doctors</span>: {record.copyDoctors}
         </p> */}
-        <Accordion type="single" collapsible>
-          <AccordionItem value="transcript">
-            <AccordionTrigger>Original Transcript</AccordionTrigger>
-            <AccordionContent>
-              <Textarea
-                value={record.transcript}
-                rows={14}
-                autoComplete="off"
-                onChange={(e) => handleRecordFieldChange('transcript', e.target.value)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <p className="pb-4">
+        <p className="pb-4  pt-4">
           <span className="font-semibold">Email: </span>
         </p>
         <Textarea
@@ -84,14 +68,26 @@ export const RecordForm: React.FC<Props> = ({ record, index, totalRecords }) => 
           >
             Try again
           </Button>
-          <Select value="{model}" onValueChange={(value) => handleRecordFieldChange('model', value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Modal">{record.model}</SelectValue>
+          <Select value={record.model} onValueChange={(value) => handleRecordFieldChange('model', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Model">{record.model}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {MODELS.map((model) => (
                 <SelectItem key={model} value={model}>
                   {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={record.temperature?.toString()} onValueChange={(value) => handleRecordFieldChange('temperature', Number.parseFloat(value))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Temperature">{record.temperature}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {TEMPS.map((temp) => (
+                <SelectItem key={temp} value={temp}>
+                  {temp}
                 </SelectItem>
               ))}
             </SelectContent>

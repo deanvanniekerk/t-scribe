@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { RecordForm } from './RecordForm';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MODELS } from '@/lib/ai';
+import { MODELS, TEMPS } from '@/lib/ai';
 
 // any because FileList is not supported in SSR
 const formSchema = z.object({
@@ -20,7 +20,7 @@ const formSchema = z.object({
 });
 
 export const AudioFilesForm: React.FC = () => {
-  const { uploadAudioFiles, records, isProcessing, currentRecordIndex, progress, model, setModel } = useProcessStore(
+  const { uploadAudioFiles, records, isProcessing, currentRecordIndex, progress, model, setModel, temperature, setTemperature } = useProcessStore(
     (state) => state,
   );
 
@@ -59,18 +59,32 @@ export const AudioFilesForm: React.FC = () => {
             Start
           </Button>
 
-          <Select value="{model}" onValueChange={setModel}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Modal">{model}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {MODELS.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={model} onValueChange={setModel}>
+              <SelectTrigger>
+                <SelectValue placeholder="Model">{model}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {MODELS.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={temperature.toString()} onValueChange={(value) => setTemperature(Number.parseFloat(value))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Temperature">{temperature}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {TEMPS.map((temp) => (
+                  <SelectItem key={temp} value={temp}>
+                    {temp}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </form>
 

@@ -1,4 +1,4 @@
-import { AudioToTextResponse, FileUploadResponse, type ProcessRequest, Record } from '@/app/types';
+import { FileUploadResponse, type ProcessRequest, Record } from '@/app/types';
 import { MODELS } from '@/lib/ai';
 import { createStore } from 'zustand/vanilla';
 import JSZip from 'jszip';
@@ -15,6 +15,7 @@ export type ProcessState = {
   records: Record[];
   currentRecordIndex: number;
   model: string;
+  temperature: number;
 };
 
 export type ProcessActions = {
@@ -23,6 +24,7 @@ export type ProcessActions = {
   prevRecord: () => void;
   updateRecord: (index: number, record: Record) => void;
   setModel: (model: string) => void;
+  setTemperature: (temperature: number) => void;
   reprocess: (index: number, model: string) => void;
   downloadZip: () => Promise<void>;
   reset: () => void;
@@ -38,6 +40,7 @@ export const defaultInitState: ProcessState = {
   currentRecordIndex: 0,
   model: MODELS[0],
   isReprocessing: false,
+  temperature: 0.2, // Default temperature value
 };
 
 export const createProcessStore = (initState: ProcessState = defaultInitState) => {
@@ -55,7 +58,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
 
           const records = get().records;
           for (const record of records) {
-            const fileName = `${record.fileNumber}_${record.patientName.replaceAll("'", '')}.txt`;
+            const fileName = `${record.fileNumber}_${record.patientName.replaceAll("'", '')}_${record.referredBy.replaceAll("'", '')}.txt`;
             zip.file(fileName, record.emailBody); // Add file to zip
           }
 
@@ -69,6 +72,9 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
         },
         setModel: (model) => {
           set({ model });
+        },
+        setTemperature: (temperature) => {
+          set({ temperature });
         },
         nextRecord: () => {
           set((state) => ({
@@ -92,9 +98,10 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
             const record = get().records[index];
             const request: ProcessRequest = {
               model,
-              transcription: record.transcript,
+              file: record.file,
+              temperature: record.temperature,
             };
-            const response = await fetch('/api/process', {
+            const response = await fetch('/api/scriber', {
               method: 'POST',
               body: JSON.stringify(request),
             });
@@ -114,7 +121,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
         },
         uploadAudioFiles: async (files: FileList) => {
           let currentProgress = 0;
-          const totalProgress = files.length * 3;
+          const totalProgress = files.length * 2;
 
           set({ files });
 
@@ -140,37 +147,24 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
                 progress: Math.ceil((currentProgress / totalProgress) * 100),
               });
 
-              const audioToTextResponse = await retry(
-                () =>
-                  fetch('/api/scriber', {
-                    method: 'POST',
-                    body: JSON.stringify(FileUploadResponse.parse(fileUploadResponse)),
-                  }).then((res) => res.json()),
-                { retries: 5 },
-              );
-
-              const [text] = AudioToTextResponse.parse(audioToTextResponse);
-
-              currentProgress += 1;
-              set({
-                progress: Math.ceil((currentProgress / totalProgress) * 100),
-              });
+              const fileUploadReponse = FileUploadResponse.parse(fileUploadResponse);
 
               const request: ProcessRequest = {
                 model: get().model,
-                transcription: text.transcription,
+                file: fileUploadReponse,
+                temperature: get().temperature,
               };
 
-              const response = await retry(
+              const recordResponse = await retry(
                 () =>
-                  fetch('/api/process', {
+                  fetch('/api/scriber', {
                     method: 'POST',
                     body: JSON.stringify(request),
                   }).then((res) => res.json()),
                 { retries: 5 },
               );
 
-              const processReponse = Record.parse(response);
+              const record = Record.parse(recordResponse);
 
               currentProgress += 1;
               set({
@@ -178,7 +172,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
               });
 
               set((state) => ({
-                records: [...state.records, processReponse],
+                records: [...state.records, record],
               }));
             }
           } catch (error) {
@@ -193,6 +187,7 @@ export const createProcessStore = (initState: ProcessState = defaultInitState) =
       }),
       {
         name: 'process-store',
+        version: 2,
       },
     ),
   );

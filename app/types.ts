@@ -9,27 +9,21 @@ export const FileUploadResponse = z.array(
   }),
 );
 
-export type AudioToTextResponse = z.infer<typeof AudioToTextResponse>;
-export const AudioToTextResponse = z.array(
-  z.object({
-    fileName: z.string(),
-    transcription: z.string(),
-  }),
-);
-
 export type ProcessRequest = z.infer<typeof ProcessRequest>;
 export const ProcessRequest = z.object({
+  temperature: z.number().optional(),
   model: z.string(),
-  transcription: z.string(),
+  file: FileUploadResponse,
 });
 
 export type Record = z.infer<typeof Record>;
 export const Record = z.object({
-  transcript: z.string(),
   emailBody: z.string(),
   fileNumber: z.string(),
   patientName: z.string(),
-  referringDoctor: z.string(),
-  copyDoctors: z.string(),
+  referredBy: z.string(),
+
   model: z.string(),
+  file: FileUploadResponse,
+  temperature: z.number(),
 });
