@@ -1,2 +1,2 @@
-export const MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+export const MODELS = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-2.5-pro'];
 export const TEMPS = ['0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1'];
