@@ -18,10 +18,10 @@ export const POST = async (req: Request) => {
     contents: createUserContent([
       createPartFromUri(file.fileUri, file.mimeType),
       'Supplied is an audio file, generate a transcript of the Ophthalmologist doctors notes after a consult with patient. Expect medical terminology.',
-      `I am a specialist ophtalmologist. 
-I will provide you with my notes after a consult with a patient. 
-I need you to create an email for the referring doctor or optometrist based upon my notes. 
-Please format the email in a way that is medically professional and friendly. 
+      `I am a specialist ophtalmologist.
+I will provide you with my notes after a consult with a patient.
+I need you to create an email for the referring doctor or optometrist based upon my notes.
+Please format the email in a way that is medically professional and friendly.
 It is highly important that the email is grammatically correct and medically sound.
 If there are obvious diagnoses, please include them in the email.
 When starting the email address referring doctors and optometrists by their first name, if there is no first name, refer to doctor as "Dr {last name}" and optometrist as "Mr/Mrs {last name}".
@@ -55,8 +55,6 @@ The email should be added to the emailBody field.`,
       },
     },
   });
-
-  // console.log('transcript generated', file.fileUri, model, result.text);
 
   const response = Record.parse({
     model: process.model,

@@ -22,8 +22,24 @@ export const Record = z.object({
   fileNumber: z.string(),
   patientName: z.string(),
   referredBy: z.string(),
-
   model: z.string(),
   file: FileUploadResponse,
   temperature: z.number(),
+});
+
+export const SessionStatus = z.enum(['uploading', 'processing', 'reviewing', 'completed']);
+export type SessionStatus = z.infer<typeof SessionStatus>;
+
+export type Session = z.infer<typeof Session>;
+export const Session = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: SessionStatus,
+  records: z.array(Record),
+  currentRecordIndex: z.number(),
+  model: z.string(),
+  temperature: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  userId: z.string(),
 });
